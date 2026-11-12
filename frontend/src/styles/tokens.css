@@ -1,0 +1,36 @@
+/* newssweep design tokens — 夜间编辑部「舆情值班墙」
+   深靛底 + 琥珀号外色 + LED 点阵数字 + 报纸栏线；所有具体颜色只出现在本文件。 */
+:root {
+  --ground: oklch(23.5% 0.045 265);
+  --ground-2: oklch(27.5% 0.048 266);
+  --ground-3: oklch(31% 0.045 268);
+  --ground-4: oklch(36% 0.042 268);
+
+  --ink: oklch(93.5% 0.013 85);
+  --ink-soft: oklch(79% 0.018 84);
+  --ink-faint: oklch(64% 0.024 258);
+
+  --rule: oklch(46% 0.035 262);
+  --rule-soft: oklch(38% 0.03 264);
+  --rule-bright: oklch(62% 0.03 258);
+
+  --amber: oklch(79% 0.145 78);
+  --amber-deep: oklch(68% 0.14 72);
+  --amber-dim: oklch(52% 0.1 74);
+
+  --pos: oklch(72% 0.09 138);
+  --neu: oklch(72% 0.012 90);
+  --neg: oklch(64% 0.185 22);
+  --neg-deep: oklch(52% 0.17 22);
+  --watch: oklch(70% 0.065 140);
+  --alert: oklch(78% 0.14 66);
+  --critical: oklch(66% 0.2 20);
+
+  --sans: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --mono: 'Spline Sans Mono', 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+
+  --rail: 236px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --hair: 1px solid var(--rule-soft);
+  --column: 1px solid var(--rule-soft);
+}

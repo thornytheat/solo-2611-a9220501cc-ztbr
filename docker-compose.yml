@@ -1,0 +1,124 @@
+name: newssweep
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-newssweep}-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-newssweep}
+      POSTGRES_USER: ${DB_USER:-newssweep}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-newssweep_pw_2026}
+      TZ: Asia/Shanghai
+    ports:
+      - "${DB_PORT:-17751}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-newssweep} -d ${DB_NAME:-newssweep}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-newssweep}-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-newssweep}-backend
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-newssweep}
+      DB_USER: ${DB_USER:-newssweep}
+      DB_PASSWORD: ${DB_PASSWORD:-newssweep_pw_2026}
+      JWT_SECRET: ${JWT_SECRET:-newssweep-jwt-secret-change-me-2026}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      RATE_LIMIT_COLLECT_PER_MINUTE: ${RATE_LIMIT_COLLECT_PER_MINUTE:-6}
+      RATE_LIMIT_DETECT_PER_MINUTE: ${RATE_LIMIT_DETECT_PER_MINUTE:-8}
+    ports:
+      - "${BACKEND_PORT:-19251}:8000"
+    volumes:
+      - backend_artifacts:/app/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-newssweep}-worker
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-newssweep}
+      DB_USER: ${DB_USER:-newssweep}
+      DB_PASSWORD: ${DB_PASSWORD:-newssweep_pw_2026}
+      JWT_SECRET: ${JWT_SECRET:-newssweep-jwt-secret-change-me-2026}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - backend_artifacts:/app/backend/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "/app/healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    container_name: ${COMPOSE_PROJECT_NAME:-newssweep}-frontend
+    ports:
+      - "${FRONTEND_PORT:-18251}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  redis_data:
+  backend_artifacts:

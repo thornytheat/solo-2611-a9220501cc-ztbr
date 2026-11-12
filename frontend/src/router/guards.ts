@@ -1,0 +1,21 @@
+import type { Router } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { useMetaStore } from '../stores/metaStore'
+
+export function setupGuards(router: Router) {
+  router.beforeEach(async (to) => {
+    const auth = useAuthStore()
+    if (to.meta.public) {
+      if (auth.isAuthenticated && to.path === '/login') return { path: '/mentions' }
+      return true
+    }
+    if (!auth.isAuthenticated) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
+    if (!auth.user) await auth.restore()
+    if (!auth.isAuthenticated) return { path: '/login' }
+    const meta = useMetaStore()
+    if (!meta.payload) await meta.load()
+    return true
+  })
+}

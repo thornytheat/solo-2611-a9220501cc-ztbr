@@ -1,0 +1,21 @@
+/** 错误码 → 中文提示（后端同一批 code）。 */
+export const ERROR_MESSAGES: Record<string, string> = {
+  AUTH_REQUIRED: '请先登录',
+  AUTH_INVALID: '邮箱或密码不正确',
+  TOKEN_EXPIRED: '登录已过期，请重新登录',
+  FORBIDDEN: '当前角色无权执行该操作',
+  BRAND_SCOPE_DENIED: '该数据不属于你负责的品牌',
+  NOT_FOUND: '对象不存在',
+  VALIDATION_ERROR: '请求参数不合法',
+  GROUP_DISABLED: '关键词组已停用，不能发起采集',
+  GROUP_CODE_TAKEN: '关键词组编码已存在',
+  GROUP_EMPTY_KEYWORDS: '关键词组至少需要一个主关键词',
+  MENTION_ALREADY_REVIEWED: '该条提及已完成复核',
+  BURST_NOT_OPEN: '该事件不在待处置状态',
+  BURST_ALREADY_CLAIMED: '该事件已被其他值班员认领',
+  COLLECT_EMPTY: '采集窗口内没有可入库的条目',
+  DETECT_NO_DATA: '当前窗口没有足够历史基线，无法判定',
+  EXPORT_EMPTY: '当日没有可导出的负面提及',
+  RATE_LIMITED: '请求过于频繁，请稍后重试',
+  INTERNAL_ERROR: '服务内部错误',
+}
