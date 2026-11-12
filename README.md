@@ -43,6 +43,7 @@
 ## 2. 主要功能
 
 - **提及流**：时间序列表 + 24 小时情感色带（负/中/正堆叠）+ 来源/情感/复核筛选 + 全文搜索 + 情感分排序。
+- **补采批次**（可跟踪、可断点续跑）：选品牌 × 来源 × 时间段建批次，逐源处理并在页面实时给出待处理 / 已入库 / 重复 / 失败计数；单源中断只回滚该源（SAVEPOINT），来源行与逐候选台账即断点，恢复后「重试」只处理失败来源、成功来源不重放；重复运行同一批次零新增（external_id + content_hash 两级去重）。批次结果可逐源回看，台账计数与 mentions 入库明细对账；新提及同步情感打分，封口后按品牌重跑爆发统计。
 - **提及详情**：正文按后端返回的 `offset/length` 高亮证据词（否定命中单独标色），逐词证据表（极性/权重/程度/否定/贡献），同事件关联（同组 ±2 小时），命中的爆发窗口。
 - **关键词组与词典**：12 组关键词的主词/同义词/排除词编辑（admin）、z 阈值与最小量、召回试算（92 条候选上真跑召回率/精度/排除命中）、情感词典只读展示。
 - **爆发预警看板**：危急/预警/关注三级 LED 计数、事件列表（z 降序）、逐小时量 vs 7 天同小时基线折线、基线序列、窗口内提及样本、认领与处置。
@@ -118,17 +119,17 @@ SEED_SUMMARY brand=newssweep sources=4 groups=12 mentions=900 bursts=5 users=3
 gb-578/
 ├── backend/
 │   ├── src/{config,constants,controllers,middlewares,models,routes,schemas,services,utils}
-│   │   └── services/analysis/{lexicon.py,sentiment_analyzer.py,burst_detector.py,dedupe.py}
-│   ├── scripts/{bootstrap_db.py,seed_demo.py,fixtures.py}
-│   ├── migrations/{env.py,versions/0001_initial.py}
+│   │   └── services/analysis/{lexicon.py,sentiment_analyzer.py,burst_detector.py,dedupe.py,collect_planner.py,source_gateway.py}
+│   ├── scripts/{bootstrap_db.py,seed_demo.py,fixtures.py,verify_collect_batch.py,verify_collect_batch_http.py}
+│   ├── migrations/{env.py,versions/0001_initial.py,versions/0002_collect_batch.py}
 │   └── Dockerfile / entrypoint.sh / requirements.txt
 ├── worker/src/{config,core,tasks}       # Celery worker + beat + 心跳
 ├── frontend/src/
-│   ├── api/           # 每个实体一个 api 模块
-│   ├── stores/        # auth / meta / mention / group / burst
+│   ├── api/           # 每个实体一个 api 模块（含 collectBatch.ts）
+│   ├── stores/        # auth / meta / mention / group / burst / collectBatch
 │   ├── types/         # domain.ts 与后端 serialize 字段一一对应
 │   ├── components/{common,domain}
-│   ├── pages/         # Login / Mentions / MentionDetail / Groups / Bursts
+│   ├── pages/         # Login / Mentions / MentionDetail / Groups / Bursts / CollectBatches
 │   ├── hooks/         # useAsync / useDebounced / useTicker
 │   ├── utils/         # request / format / highlight
 │   └── constants/     # enums / roles / messages
@@ -179,6 +180,31 @@ gb-578/
 | `Mention` | `mentions` | `models/mention.py` | `schemas/mention.py` | `services/mention_service.py` | `mention_controller.py` → `routes/mention.py` | `api/mention.ts` | `stores/mentionStore.ts` | `MentionsPage` / `MentionDetailPage` / `MentionRow.vue` |
 | `SentimentScore` | `sentiment_scores` | `models/sentiment_score.py` | `schemas/mention.py` | `services/sentiment_service.py` + `analysis/sentiment_analyzer.py` | `sentiment_controller.py` → `routes/sentiment.py` | `api/sentiment.ts` | `stores/mentionStore.ts` | `EvidenceText` / `HitTable` / `ScoreGauge` |
 | `BurstAlert` | `burst_alerts` | `models/burst_alert.py` | `schemas/burst.py` | `services/burst_service.py` + `analysis/burst_detector.py` | `burst_controller.py` → `routes/burst.py` | `api/burst.ts` | `stores/burstStore.ts` | `pages/BurstsPage.vue` / `BurstTrend.vue` |
+
+### 8.1 补采批次（第 5 类实体，三张表协作）
+
+| 表 | 角色 |
+|---|---|
+| `collect_batches` | 批次头：品牌 / 时间窗 / 批次状态（pending→running→completed/partial）/ 四类汇总计数 / 情感与爆发同步标记 |
+| `collect_batch_sources` | 逐源断点：状态（pending/running/success/failed）+ candidates/inserted/duplicates/failed/skipped + cursor + attempts；同批次同来源唯一，重试复用同一行 |
+| `collect_batch_items` | 逐候选台账：每个候选一行（同批次 external_id 唯一），记录 inserted/duplicate/failed/skipped 与 mention_id，是页面数字与入库明细对账的唯一事实源 |
+
+状态机与口径：
+
+1. 建批次时按（品牌、来源、时间窗）切片候选，来源行与台账全部置 pending，候选数即「待处理」初始值。
+2. `POST /collect/batches/{id}/run` 每次调用对每个未成功来源**最多尝试一次**：成功来源（`success` 是唯一不可重放终态）永不重放；`failed` 是可重试断点，留到下一次 run（前端「重试失败来源」）。
+3. 单源用 SAVEPOINT 包裹，失败只回滚该源入库；网关中断时该源 pending 台账统一留痕 failed，已成功来源的提交保留。
+4. 口径封闭：`pending + inserted + duplicate + failed + skipped = total` 恒成立；`/reconciliation` 同时核对台账 inserted 数、mentions 表行数、sentiment_scores 行数三者一致。
+5. 幂等：两级去重（external_id 命中、content_hash+来源+发布小时命中）保证重复运行同批次或重建同窗口批次都不新增提及。
+6. 新提及入库即写 `SentimentScore`；批次全部来源成功后按品牌重跑爆发检测，回写 `burst_synced / burst_events`。
+
+本地验证（需要可连的 Postgres）：
+
+```bash
+python -m scripts.verify_collect_batch        # 服务层端到端：中断→续跑→幂等→对账
+python -m scripts.verify_collect_batch_http   # HTTP 接口端到端（TestClient，绕过 Redis 限流）
+pytest -q                                     # 纯函数单测（含 collect_planner / source_gateway）
+```
 
 ## 9. 枚举出现位置（前后端各一份）
 

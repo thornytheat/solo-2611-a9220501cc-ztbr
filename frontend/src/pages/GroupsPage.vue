@@ -7,7 +7,7 @@
     >
       <template #actions>
         <button v-if="canWrite" class="btn" data-test="new-group" @click="startCreate">新建组</button>
-        <button v-if="canTrial" class="btn" :disabled="!form.keywords.length" data-test="trial" @click="runTrial">试算召回</button>
+        <button v-if="canTrial" class="btn" :disabled="!form.keywordsText.trim().length" data-test="trial" @click="runTrial">试算召回</button>
         <button v-if="canWrite" class="btn btn--amber" :disabled="store.saving" data-test="save-group" @click="save">保存修改</button>
       </template>
     </PageHeader>

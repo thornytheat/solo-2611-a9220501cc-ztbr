@@ -274,6 +274,93 @@ export interface CollectReport {
   finished_at: string
 }
 
+export type CollectBatchStatus = 'pending' | 'running' | 'completed' | 'partial'
+export type CollectSourceStatus = 'pending' | 'running' | 'success' | 'failed'
+export type CollectItemStatus = 'pending' | 'inserted' | 'duplicate' | 'failed' | 'skipped'
+
+export interface CollectBatchCounts {
+  pending: number
+  inserted: number
+  duplicate: number
+  failed: number
+  skipped: number
+  total: number
+}
+
+export interface CollectBatchSource {
+  id: string
+  source_code: SourceCode
+  source_label: string
+  position: number
+  status: CollectSourceStatus
+  status_label: string
+  counts: CollectBatchCounts
+  cursor: number
+  attempts: number
+  error_message: string
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface CollectBatch {
+  id: string
+  batch_no: string
+  brand_key: BrandKey
+  brand_label: string
+  window_start: string
+  window_end: string
+  status: CollectBatchStatus
+  status_label: string
+  counts: CollectBatchCounts
+  sentiment_synced: boolean
+  burst_synced: boolean
+  burst_events: number
+  run_count: number
+  last_error: string
+  created_by_email: string
+  created_at: string | null
+  started_at: string | null
+  finished_at: string | null
+  sources: CollectBatchSource[]
+}
+
+export interface CollectBatchItem {
+  id: string
+  source_code: SourceCode
+  source_label: string
+  position: number
+  external_id: string
+  group_code: string
+  title: string
+  published_at: string
+  status: CollectItemStatus
+  status_label: string
+  duplicate_reason: string
+  mention_id: string | null
+  error_message: string
+}
+
+export interface CollectBatchReconciliation {
+  batch_no: string
+  ledger: {
+    pending: number
+    inserted: number
+    duplicate: number
+    failed: number
+    skipped: number
+  }
+  mentions_in_db: number
+  sentiment_scored_in_db: number
+  matched: boolean
+  closed: boolean
+}
+
+export interface SourceHealth {
+  code: SourceCode
+  online: boolean
+  reason: string
+}
+
 export interface SentimentGroupRow {
   id: string
   code: string

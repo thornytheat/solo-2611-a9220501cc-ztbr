@@ -6,10 +6,10 @@
       :description="`${meta.groups.length} 组关键词 · ${meta.sources.length} 个来源 · 当前视图 ${store.total} 条。点击任一条进入情感证据页。`"
     >
       <template #actions>
-        <button v-if="auth.can('collect:run')" class="btn" :disabled="busy" data-test="collect" @click="collect">
+        <button v-if="auth.can('collect:run')" class="btn" :disabled="busy !== ''" data-test="collect" @click="collect">
           {{ busy === 'collect' ? '采集中…' : '运行采集' }}
         </button>
-        <button v-if="auth.can('sentiment:rescore')" class="btn" :disabled="busy" data-test="rescore" @click="rescore">
+        <button v-if="auth.can('sentiment:rescore')" class="btn" :disabled="busy !== ''" data-test="rescore" @click="rescore">
           {{ busy === 'rescore' ? '重算中…' : '重算情感' }}
         </button>
         <button v-if="auth.can('export:daily')" class="btn btn--amber" data-test="export" @click="openExport">

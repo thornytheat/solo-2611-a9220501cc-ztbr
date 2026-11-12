@@ -35,6 +35,12 @@ const router = createRouter({
       component: () => import('../pages/BurstsPage.vue'),
       meta: { title: '爆发预警看板' },
     },
+    {
+      path: '/collect-batches',
+      name: 'collect-batches',
+      component: () => import('../pages/CollectBatchesPage.vue'),
+      meta: { title: '补采批次' },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/mentions' },
   ],
   scrollBehavior: () => ({ top: 0 }),

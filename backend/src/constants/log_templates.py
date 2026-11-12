@@ -4,6 +4,8 @@ from __future__ import annotations
 ACTION_LOGIN = "auth.login"
 ACTION_LOGIN_FAILED = "auth.login_failed"
 ACTION_COLLECT_RUN = "collect.run"
+ACTION_COLLECT_BATCH_CREATE = "collect.batch_create"
+ACTION_COLLECT_BATCH_RUN = "collect.batch_run"
 ACTION_SENTIMENT_RESCORE = "sentiment.rescore"
 ACTION_SENTIMENT_REVIEW = "sentiment.review"
 ACTION_BURST_DETECT = "burst.detect"
@@ -18,6 +20,8 @@ ACTION_LABELS: dict[str, str] = {
     ACTION_LOGIN: "登录",
     ACTION_LOGIN_FAILED: "登录失败",
     ACTION_COLLECT_RUN: "运行采集",
+    ACTION_COLLECT_BATCH_CREATE: "创建补采批次",
+    ACTION_COLLECT_BATCH_RUN: "运行补采批次",
     ACTION_SENTIMENT_RESCORE: "重算情感",
     ACTION_SENTIMENT_REVIEW: "情感复核",
     ACTION_BURST_DETECT: "爆发检测",

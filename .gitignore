@@ -8,6 +8,10 @@ __pycache__/
 .mypy_cache/
 *.egg-info/
 
+# 本地便携 Postgres（仅用于无 Docker 环境下的本地验证，非项目内容）
+.pgdata/
+.pgdist/
+
 # 本地配置与密钥
 .env
 .env.local

@@ -68,6 +68,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useMetaStore } from '../../stores/metaStore'
+import { useCollectBatchStore } from '../../stores/collectBatchStore'
 import { ROLE_LABELS } from '../../constants/roles'
 import { clockLabel, dayLabel } from '../../utils/format'
 import { useTicker } from '../../hooks/useTicker'
@@ -76,6 +77,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const meta = useMetaStore()
+const batchStore = useCollectBatchStore()
 const now = useTicker()
 
 const edition = computed(() => {
@@ -90,11 +92,16 @@ const clockText = computed(() => clockLabel(now.value.toISOString()))
 const roleLabel = computed(() => ROLE_LABELS[auth.role] ?? auth.role)
 const algorithms = computed(() => meta.algorithms)
 
-const navItems = computed(() => [
-  { to: '/mentions', num: '壹', label: '提及流', meta: `${meta.counts.mentions}` },
-  { to: '/groups', num: '貳', label: '关键词组与词典', meta: `${meta.groups.length}` },
-  { to: '/bursts', num: '參', label: '爆发预警看板', meta: `${meta.counts.bursts}` },
-])
+const navItems = computed(() => {
+  const items = [
+    { to: '/mentions', num: '壹', label: '提及流', meta: `${meta.counts.mentions}` },
+    { to: '/collect-batches', num: '貳', label: '补采批次', meta: `${batchStore.total || ''}` },
+    { to: '/groups', num: '參', label: '关键词组与词典', meta: `${meta.groups.length}` },
+    { to: '/bursts', num: '肆', label: '爆发预警看板', meta: `${meta.counts.bursts}` },
+  ]
+  // 补采批次仅员工可见（接口同样以 collect:run 拦截品牌方）
+  return auth.can('collect:run') ? items : items.filter((item) => item.to !== '/collect-batches')
+})
 
 function logout() {
   auth.logout()

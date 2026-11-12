@@ -41,6 +41,10 @@ class Mention(Base, TimestampMixin):
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="", index=True)
+    # 补采批次溯源：常规采集/seed 为空；补采批次入库时回填，支持批次→提及反查
+    collect_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
 
     group = relationship("KeywordGroup", lazy="joined")
     sentiment = relationship(
